@@ -69,7 +69,7 @@ class InfoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1), // ✅ Fixed
             spreadRadius: 1,
             blurRadius: 10,
             offset: const Offset(0, 3),
@@ -106,7 +106,7 @@ class StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1), // ✅ Fixed
             spreadRadius: 1,
             blurRadius: 10,
             offset: const Offset(0, 3),
@@ -129,7 +129,7 @@ class StatCard extends StatelessWidget {
                 lineBarsData: [
                   LineChartBarData(
                     isCurved: true,
-                    color: const Color(0xFFFF8DA1),
+                    color: const Color(0xFF4f99c9),
                     dotData: FlDotData(show: true),
                     spots: const [
                       FlSpot(1, 20),

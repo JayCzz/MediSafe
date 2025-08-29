@@ -119,7 +119,7 @@ class _GuidePageState extends State<GuidePage> {
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFB53158), // Vivid Burgundy
+                            color: Color(0xFF05318a), // Vivid Burgundy
                           ),
                         ),
                         const SizedBox(height: 15),
@@ -154,7 +154,7 @@ class _GuidePageState extends State<GuidePage> {
           width: _currentPage == index ? 20 : 8,
           decoration: BoxDecoration(
             color: _currentPage == index
-                ? const Color(0xFFB53158)
+                ? const Color(0xFF05318a)
                 : Colors.grey.shade400,
             borderRadius: BorderRadius.circular(4),
           ),

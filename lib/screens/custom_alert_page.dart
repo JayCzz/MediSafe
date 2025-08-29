@@ -95,7 +95,7 @@ class _CustomAlertPageState extends State<CustomAlertPage> {
           CupertinoSwitch(
             value: value,
             onChanged: onChanged,
-            activeTrackColor: const Color(0xFFB53158), // Vivid Burgundy
+            activeTrackColor: const Color(0xFF05318a), // Vivid Burgundy
           ),
         ],
       ),
@@ -108,7 +108,7 @@ class _CustomAlertPageState extends State<CustomAlertPage> {
       title: Text(label),
       value: value,
       onChanged: onChanged,
-      activeColor: const Color(0xFFB53158), // Vivid Burgundy
+      activeColor: const Color(0xFF05318a), // Vivid Burgundy
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
       ),

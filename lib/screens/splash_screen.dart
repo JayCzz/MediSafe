@@ -32,6 +32,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Total splash screen duration: 3.5 seconds
     Future.delayed(const Duration(milliseconds: 3500), () {
+      if (!mounted) return; // ✅ Prevents using context if widget is disposed
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LandingPage()),
@@ -62,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             const SizedBox(height: 40),
             const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9B1B30)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF05318a)),
             ),
           ],
         ),

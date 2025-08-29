@@ -30,7 +30,7 @@ class AboutUsPage extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF9B1B30),
+                      color: Color(0xFF05318a),
                     ),
                   ),
                   SizedBox(height: 12),
@@ -77,7 +77,12 @@ class AboutUsPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05), // ✅ Fixed
+            blurRadius: 12,
+          )
+        ],
       ),
       child: child,
     );
@@ -97,7 +102,12 @@ class _TeamMember extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 8)],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withValues(alpha: 0.05), // ✅ Fixed
+            blurRadius: 8,
+          )
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

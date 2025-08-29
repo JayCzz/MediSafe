@@ -70,7 +70,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   controller: _userNameController,
                   decoration: InputDecoration(
                     labelText: 'Username',
-                    labelStyle: const TextStyle(color: Color(0xFFB53158)),
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -85,7 +85,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    labelStyle: const TextStyle(color: Color(0xFFB53158)),
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -104,7 +104,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     labelText: 'Phone Number',
-                    labelStyle: const TextStyle(color: Color(0xFFB53158)),
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -120,7 +120,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    labelStyle: const TextStyle(color: Color(0xFFB53158)),
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -141,7 +141,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: 'Confirm Password',
-                    labelStyle: const TextStyle(color: Color(0xFFB53158)),
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -165,7 +165,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   height: 45,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFB53158),
+                      backgroundColor: const Color(0xFF05318a),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: _createAccount,

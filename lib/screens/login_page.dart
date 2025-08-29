@@ -25,6 +25,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return; // ✅ safeguard
     setState(() {
       _rememberMe = prefs.getBool('rememberMe') ?? false;
       if (_rememberMe) {
@@ -47,6 +48,8 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.remove('username');
         await prefs.remove('password');
       }
+
+      if (!mounted) return; // ✅ safeguard before using context
 
       Navigator.pushReplacement(
         context,
@@ -76,20 +79,29 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 50),
                 const Text(
                   'MediSafe',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
-                const Text('Login', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Login',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
                     labelText: 'Username',
-                    labelStyle: const TextStyle(color: Color(0xFFB53158)),
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   validator: (value) =>
                       value == null || value.isEmpty ? 'Please enter your username' : null,
@@ -100,13 +112,18 @@ class _LoginPageState extends State<LoginPage> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    labelStyle: const TextStyle(color: Color(0xFFB53158)),
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   validator: (value) =>
@@ -135,11 +152,16 @@ class _LoginPageState extends State<LoginPage> {
                   height: 45,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFB53158),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      backgroundColor: const Color(0xFF05318a),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: _login,
-                    child: const Text('Login', style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               ],

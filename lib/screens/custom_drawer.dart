@@ -58,7 +58,7 @@ class CustomDrawer extends StatelessWidget {
                 Navigator.popUntil(context, (route) => route.isFirst);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFB53158),
+                backgroundColor: const Color(0xFF05318a),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -83,16 +83,18 @@ class CustomDrawer extends StatelessWidget {
     final bool isSelected = currentRoute == routeName;
 
     return Container(
-      color: isSelected ? const Color(0xFFB53158).withOpacity(0.1) : Colors.transparent,
+      color: isSelected
+          ? const Color(0xFF05318a).withValues(alpha: 0.1) // ✅ Fixed
+          : Colors.transparent,
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected ? const Color(0xFFB53158) : Colors.black87,
+          color: isSelected ? const Color(0xFF05318a) : Colors.black87,
         ),
         title: Text(
           label,
           style: TextStyle(
-            color: isSelected ? const Color(0xFFB53158) : Colors.black87,
+            color: isSelected ? const Color(0xFF05318a) : Colors.black87,
             fontSize: 16,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
