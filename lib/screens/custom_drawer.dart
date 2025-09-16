@@ -23,7 +23,7 @@ class CustomDrawer extends StatelessWidget {
           _buildDrawerItem(
             context,
             Icons.dashboard,
-            'Dashboard',
+            'Home',
             '/home',
             currentRoute,
           ),

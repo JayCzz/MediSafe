@@ -4,6 +4,9 @@ import 'create_account_page.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'home_page.dart';
 
+// (NEW) Facebook login package
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
 
@@ -21,11 +24,10 @@ class _LandingPageState extends State<LandingPage> {
     try {
       final account = await _googleSignIn.signIn();
 
-      if (!mounted) return; // ✅ Prevents using context if widget is disposed
+      if (!mounted) return;
 
       if (account != null) {
         debugPrint("✅ Google Sign-In Success: ${account.email}");
-
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
@@ -34,10 +36,42 @@ class _LandingPageState extends State<LandingPage> {
         debugPrint("⚠️ Google Sign-In canceled by user");
       }
     } catch (e) {
-      if (!mounted) return; // ✅ Safety check again for SnackBar
+      if (!mounted) return;
       debugPrint("❌ Google Sign-In error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Google Sign-In failed")),
+      );
+    }
+  }
+
+  /// Facebook Sign-In method
+  Future<void> _facebookLogin() async {
+    try {
+      final LoginResult result = await FacebookAuth.instance.login();
+
+      if (!mounted) return;
+
+      if (result.status == LoginStatus.success) {
+        final userData = await FacebookAuth.instance.getUserData();
+        debugPrint("✅ Facebook Sign-In Success: ${userData['email']}");
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      } else if (result.status == LoginStatus.cancelled) {
+        debugPrint("⚠️ Facebook Sign-In canceled by user");
+      } else {
+        debugPrint("❌ Facebook Sign-In failed: ${result.message}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Facebook Sign-In failed")),
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Facebook Sign-In error: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Facebook Sign-In error")),
       );
     }
   }
@@ -72,8 +106,7 @@ class _LandingPageState extends State<LandingPage> {
                 height: 45,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFF05318a), // Maroon color
+                    backgroundColor: const Color(0xFF05318a),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -93,7 +126,7 @@ class _LandingPageState extends State<LandingPage> {
 
               const SizedBox(height: 20),
 
-              // Divider (moved from LoginPage)
+              // Divider
               Row(
                 children: const [
                   Expanded(child: Divider()),
@@ -106,24 +139,22 @@ class _LandingPageState extends State<LandingPage> {
               ),
               const SizedBox(height: 20),
 
-              // Google Sign-In button (moved from LoginPage)
+              // Google Sign-In button
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white, // White background
-                    foregroundColor: Colors.black87, // Text color
-                    side: const BorderSide(
-                      color: Colors.grey,
-                    ), // Border like Google button
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    side: const BorderSide(color: Colors.grey),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    elevation: 0, // Flat look
+                    elevation: 0,
                   ),
                   icon: Image.asset(
-                    "assets/images/google.png", // make sure asset exists
+                    "assets/images/google.png",
                     height: 24,
                     width: 24,
                   ),
@@ -135,6 +166,36 @@ class _LandingPageState extends State<LandingPage> {
                     ),
                   ),
                   onPressed: _googleLogin,
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Facebook Sign-In button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1877F2), // FB Blue
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: Image.asset(
+                    "assets/images/facebook.png", // add fb logo to assets
+                    height: 24,
+                    width: 24,
+                  ),
+                  label: const Text(
+                    "Sign in with Facebook",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onPressed: _facebookLogin,
                 ),
               ),
 
