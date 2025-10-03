@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:bcrypt/bcrypt.dart';
 import 'login_page.dart';
 
 class CreateAccountPage extends StatefulWidget {
@@ -18,17 +20,98 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
-  void _createAccount() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created successfully!')),
+  Future<void> _createAccount() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final supabase = Supabase.instance.client;
+      final email = _emailController.text.trim();
+
+      // 1️⃣ Check if email already exists
+      final existingUser = await supabase
+          .from('users')
+          .select('email, auth_provider')
+          .eq('email', email)
+          .maybeSingle();
+
+      if (existingUser != null) {
+        final provider = existingUser['auth_provider'] ?? 'manual';
+
+        String message;
+        if (provider == 'google') {
+          message = 'This email is registered with Google. Please sign in with Google.';
+        } else if (provider == 'facebook') {
+          message = 'This email is registered with Facebook. Please sign in with Facebook.';
+        } else {
+          message = 'This email is already registered. Please log in instead.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.orange),
+        );
+
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // 2️⃣ Hash the password
+      final hashedPassword = BCrypt.hashpw(
+        _passwordController.text.trim(),
+        BCrypt.gensalt(),
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
+      // 3️⃣ Insert user into Supabase
+      final response = await supabase.from('users').insert({
+        'username': _userNameController.text.trim(),
+        'email': email,
+        'phone_number': _phoneController.text.trim(),
+        'password_hash': hashedPassword,
+        'auth_provider': 'manual', // ✅ Track provider type
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      }).select();
+
+      if (response.isEmpty) {
+        throw Exception("No data returned after insert.");
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      }
+    } on PostgrestException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating account:\n${e.message}'),
+            backgroundColor: const Color(0xFF05318a),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unexpected error: $e'),
+            backgroundColor: const Color(0xFF05318a),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -65,7 +148,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 ),
                 const SizedBox(height: 40),
 
-                // Full Name
+                // Username
                 TextFormField(
                   controller: _userNameController,
                   decoration: InputDecoration(
@@ -168,8 +251,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       backgroundColor: const Color(0xFF05318a),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    onPressed: _createAccount,
-                    child: const Text('Create Account', style: TextStyle(color: Colors.white)),
+                    onPressed: _isLoading ? null : _createAccount,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Create Account', style: TextStyle(color: Colors.white)),
                   ),
                 ),
                 const SizedBox(height: 20),

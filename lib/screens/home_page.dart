@@ -21,30 +21,37 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Info Cards
+            // Top Info Cards (responsive)
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
-                InfoCard(
-                  icon: Icons.thermostat,
-                  label: "22.0",
-                  unit: "°C",
-                  title: "Temperature",
-                  color: Colors.red, // ✅ red for temperature
+                Expanded(
+                  child: InfoCard(
+                    icon: Icons.thermostat,
+                    label: "22.0",
+                    unit: "°C",
+                    title: "Temperature",
+                    color: Colors.red,
+                  ),
                 ),
-                InfoCard(
-                  icon: Icons.battery_full,
-                  label: "50",
-                  unit: "%",
-                  title: "Battery",
-                  color: Colors.green, // ✅ green for battery
+                SizedBox(width: 10),
+                Expanded(
+                  child: InfoCard(
+                    icon: Icons.battery_full,
+                    label: "50",
+                    unit: "%",
+                    title: "Battery",
+                    color: Colors.green,
+                  ),
                 ),
-                InfoCard(
-                  icon: Icons.water_drop,
-                  label: "65",
-                  unit: "%",
-                  title: "Humidity",
-                  color: Colors.blue, // ✅ blue for humidity
+                SizedBox(width: 10),
+                Expanded(
+                  child: InfoCard(
+                    icon: Icons.water_drop,
+                    label: "65",
+                    unit: "%",
+                    title: "Humidity",
+                    color: Colors.blue,
+                  ),
                 ),
               ],
             ),
@@ -102,8 +109,6 @@ class InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 110,
-      height: 120,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -120,23 +125,23 @@ class InfoCard extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 24, color: color), // ✅ colorful icon
+          Icon(icon, size: 22, color: color),
           const SizedBox(height: 6),
           Text(
-            '$label$unit', // ✅ value on top
+            '$label$unit',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 22,
-              color: Colors.black, // ✅ black value text
+              fontSize: 18,
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            title, // ✅ label below
+            title,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: Colors.grey, // ✅ gray label
+              color: Colors.grey,
             ),
           ),
         ],
@@ -144,7 +149,6 @@ class InfoCard extends StatelessWidget {
     );
   }
 }
-
 
 class StatCard extends StatelessWidget {
   final String title;
@@ -182,10 +186,10 @@ class StatCard extends StatelessWidget {
         LineChartData(
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
-            topTitles: AxisTitles( // ✅ remove top numbers
+            topTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
-            rightTitles: AxisTitles( // ✅ remove right numbers
+            rightTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
             leftTitles: AxisTitles(
@@ -199,7 +203,8 @@ class StatCard extends StatelessWidget {
                   );
                 },
               ),
-              axisNameWidget: Text(yLabel, style: const TextStyle(fontSize: 12)),
+              axisNameWidget:
+                  Text(yLabel, style: const TextStyle(fontSize: 12)),
               axisNameSize: 20,
             ),
             bottomTitles: AxisTitles(
@@ -211,7 +216,8 @@ class StatCard extends StatelessWidget {
                       style: const TextStyle(fontSize: 12));
                 },
               ),
-              axisNameWidget: const Text("Minutes", style: TextStyle(fontSize: 12)),
+              axisNameWidget:
+                  const Text("Minutes", style: TextStyle(fontSize: 12)),
               axisNameSize: 20,
             ),
           ),

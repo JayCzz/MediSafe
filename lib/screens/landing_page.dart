@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'login_page.dart';
 import 'create_account_page.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'home_page.dart';
-
-// (NEW) Facebook login package
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'home_page.dart';
+import 'otp_verification_page.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -15,52 +15,75 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
-  /// Google Sign-In instance
-  static final GoogleSignIn _googleSignIn =
-      GoogleSignIn(scopes: ['email', 'profile']);
+  final _supabase = Supabase.instance.client;
+  bool _isLoading = false;
 
-  /// Google Sign-In method
+  /// 🟢 Google Login with OTP verification
   Future<void> _googleLogin() async {
-    try {
-      final account = await _googleSignIn.signIn();
+    setState(() => _isLoading = true);
 
-      if (!mounted) return;
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+      final account = await googleSignIn.signIn();
 
       if (account != null) {
-        debugPrint("✅ Google Sign-In Success: ${account.email}");
-        Navigator.pushReplacement(
+        final googleEmail = account.email;
+
+        // ✅ Send numeric OTP to Google email
+        await _supabase.auth.signInWithOtp(
+          email: googleEmail,
+          shouldCreateUser: true, // auto-create if new
+        );
+
+        if (!mounted) return;
+
+        // Navigate to OTP verification page
+        Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationPage(email: googleEmail),
+          ),
         );
       } else {
         debugPrint("⚠️ Google Sign-In canceled by user");
       }
     } catch (e) {
-      if (!mounted) return;
       debugPrint("❌ Google Sign-In error: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Google Sign-In failed")),
       );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Facebook Sign-In method
+  /// 🔵 Facebook Login
   Future<void> _facebookLogin() async {
+    setState(() => _isLoading = true);
     try {
       final LoginResult result = await FacebookAuth.instance.login();
 
       if (!mounted) return;
-
       if (result.status == LoginStatus.success) {
         final userData = await FacebookAuth.instance.getUserData();
-        debugPrint("✅ Facebook Sign-In Success: ${userData['email']}");
+        final fbName = userData['name'] ?? 'fb_user';
+        final fbEmail = userData['email'] ?? '${userData['id']}@facebook.com';
+
+        // Save to Supabase users table
+        await _supabase.from('users').upsert({
+          'username': fbName,
+          'email': fbEmail,
+          'auth_provider': 'facebook',
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'email');
 
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
         );
       } else if (result.status == LoginStatus.cancelled) {
-        debugPrint("⚠️ Facebook Sign-In canceled by user");
+        debugPrint("⚠️ Facebook Sign-In canceled");
       } else {
         debugPrint("❌ Facebook Sign-In failed: ${result.message}");
         ScaffoldMessenger.of(context).showSnackBar(
@@ -73,6 +96,8 @@ class _LandingPageState extends State<LandingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Facebook Sign-In error")),
       );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -83,143 +108,144 @@ class _LandingPageState extends State<LandingPage> {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/med_team.png',
-                height: 250,
-              ),
-              const SizedBox(height: 30),
-              const Text(
-                'Welcome to MediSafe',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // Normal Login Button
-              SizedBox(
-                width: double.infinity,
-                height: 45,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF05318a),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+          child: _isLoading
+              ? const CircularProgressIndicator()
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/images/med_team.png',
+                      height: 250,
                     ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                    );
-                  },
-                  child: const Text(
-                    'Login',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Divider
-              Row(
-                children: const [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Text("OR"),
-                  ),
-                  Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Google Sign-In button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    side: const BorderSide(color: Colors.grey),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 30),
+                    const Text(
+                      'Welcome to MediSafe',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    elevation: 0,
-                  ),
-                  icon: Image.asset(
-                    "assets/images/google.png",
-                    height: 24,
-                    width: 24,
-                  ),
-                  label: const Text(
-                    "Sign in with Google",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 30),
+
+                    // Normal Login
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF05318a),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginPage()),
+                          );
+                        },
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
                     ),
-                  ),
-                  onPressed: _googleLogin,
-                ),
-              ),
 
-              const SizedBox(height: 15),
+                    const SizedBox(height: 20),
 
-              // Facebook Sign-In button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1877F2), // FB Blue
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    // Divider
+                    Row(
+                      children: const [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Text("OR"),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
                     ),
-                  ),
-                  icon: Image.asset(
-                    "assets/images/facebook.png", // add fb logo to assets
-                    height: 24,
-                    width: 24,
-                  ),
-                  label: const Text(
-                    "Sign in with Facebook",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 20),
+
+                    // Google Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black87,
+                          side: const BorderSide(color: Colors.grey),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: Image.asset(
+                          "assets/images/google.png",
+                          height: 24,
+                          width: 24,
+                        ),
+                        label: const Text(
+                          "Sign in with Google",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        onPressed: _googleLogin,
+                      ),
                     ),
-                  ),
-                  onPressed: _facebookLogin,
-                ),
-              ),
 
-              const SizedBox(height: 20),
+                    const SizedBox(height: 15),
 
-              // Create account
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const CreateAccountPage()),
-                  );
-                },
-                child: const Text(
-                  'Create an account',
-                  style: TextStyle(
-                    color: Color(0xFF05318a),
-                    fontWeight: FontWeight.w600,
-                  ),
+                    // Facebook Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1877F2),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: Image.asset(
+                          "assets/images/facebook.png",
+                          height: 24,
+                          width: 24,
+                        ),
+                        label: const Text(
+                          "Sign in with Facebook",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        onPressed: _facebookLogin,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const CreateAccountPage()),
+                        );
+                      },
+                      child: const Text(
+                        'Create an account',
+                        style: TextStyle(
+                          color: Color(0xFF05318a),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

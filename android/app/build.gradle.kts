@@ -22,6 +22,10 @@ android {
     }
 
     defaultConfig {
+        // ✅ FIXED: Kotlin DSL syntax
+        manifestPlaceholders["appAuthRedirectScheme"] =
+            "com.googleusercontent.apps.YOUR_WEB_CLIENT_ID"
+
         // Use your unique application ID
         applicationId = "com.example.medisafe"
 

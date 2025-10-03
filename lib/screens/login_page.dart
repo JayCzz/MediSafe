@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:bcrypt/bcrypt.dart';
 import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -16,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -25,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return; // ✅ safeguard
+    if (!mounted) return;
     setState(() {
       _rememberMe = prefs.getBool('rememberMe') ?? false;
       if (_rememberMe) {
@@ -35,13 +38,53 @@ class _LoginPageState extends State<LoginPage> {
     });
   }
 
-  void _login() async {
-    if (_formKey.currentState!.validate()) {
-      final prefs = await SharedPreferences.getInstance();
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
 
+    setState(() => _isLoading = true);
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Fetch user by username
+      final response = await supabase
+          .from('users')
+          .select('id, username, password_hash, email, phone_number, auth_provider')
+          .eq('username', _usernameController.text.trim())
+          .maybeSingle();
+
+      if (response == null) {
+        _showError('User not found');
+        return;
+      }
+
+      final provider = response['auth_provider'] ?? 'manual';
+
+      // 1️⃣ Block manual login for Google/Facebook accounts
+      if (provider == 'google') {
+        _showError('This account is linked to Google. Please sign in with Google.');
+        return;
+      } else if (provider == 'facebook') {
+        _showError('This account is linked to Facebook. Please sign in with Facebook.');
+        return;
+      }
+
+      // 2️⃣ Validate password for manual accounts
+      final storedHash = response['password_hash'] as String;
+      final isPasswordCorrect = BCrypt.checkpw(
+        _passwordController.text.trim(),
+        storedHash,
+      );
+
+      if (!isPasswordCorrect) {
+        _showError('Invalid username or password');
+        return;
+      }
+
+      // 3️⃣ Save login info if "remember me" is checked
+      final prefs = await SharedPreferences.getInstance();
       if (_rememberMe) {
         await prefs.setBool('rememberMe', true);
-        await prefs.setString('username', _usernameController.text);
+        await prefs.setString('username', _usernameController.text.trim());
         await prefs.setString('password', _passwordController.text);
       } else {
         await prefs.remove('rememberMe');
@@ -49,13 +92,28 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.remove('password');
       }
 
-      if (!mounted) return; // ✅ safeguard before using context
+      // 4️⃣ Store logged-in user data for later use
+      await prefs.setString('user_id', response['id']);
+      await prefs.setString('email', response['email'] ?? '');
+      await prefs.setString('phone_number', response['phone_number'] ?? '');
 
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
+    } catch (e) {
+      _showError('Unexpected error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
@@ -67,6 +125,8 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -92,35 +152,52 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
+
+                // Username
                 TextFormField(
                   controller: _usernameController,
+                  cursorColor: primaryColor,
                   decoration: InputDecoration(
                     labelText: 'Username',
-                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
+                    labelStyle: TextStyle(color: primaryColor),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   validator: (value) =>
                       value == null || value.isEmpty ? 'Please enter your username' : null,
                 ),
                 const SizedBox(height: 20),
+
+                // Password
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  cursorColor: primaryColor,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
+                    labelStyle: TextStyle(color: primaryColor),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        color: primaryColor,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
@@ -130,38 +207,45 @@ class _LoginPageState extends State<LoginPage> {
                       value == null || value.isEmpty ? 'Please enter your password' : null,
                 ),
                 const SizedBox(height: 10),
+
+                // Remember me
                 Row(
                   children: [
                     Checkbox(
                       value: _rememberMe,
                       onChanged: (value) => setState(() => _rememberMe = value!),
+                      fillColor: MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return primaryColor;
+                        }
+                        return Colors.transparent;
+                      }),
+                      side: BorderSide(color: primaryColor, width: 2),
+                      checkColor: Colors.white,
                     ),
-                    const Text('Remember Me'),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        // Add "forgot password" logic
-                      },
-                      child: const Text('Forgotten password?'),
-                    )
+                    Text('Remember Me', style: TextStyle(color: primaryColor)),
                   ],
                 ),
                 const SizedBox(height: 20),
+
+                // Login button
                 SizedBox(
                   width: double.infinity,
                   height: 45,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF05318a),
+                      backgroundColor: primaryColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: _login,
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    onPressed: _isLoading ? null : _login,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Login',
+                            style: TextStyle(color: Colors.white),
+                          ),
                   ),
                 ),
               ],
