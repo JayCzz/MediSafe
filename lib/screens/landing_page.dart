@@ -32,7 +32,8 @@ class _LandingPageState extends State<LandingPage> {
         // ✅ Send numeric OTP to Google email
         await _supabase.auth.signInWithOtp(
           email: googleEmail,
-          shouldCreateUser: true, // auto-create if new
+          shouldCreateUser: true,
+          emailRedirectTo: null, // must disable magic link redirect
         );
 
         if (!mounted) return;
@@ -50,9 +51,9 @@ class _LandingPageState extends State<LandingPage> {
     } catch (e) {
       debugPrint("❌ Google Sign-In error: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Google Sign-In failed")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Google Sign-In failed")));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -93,9 +94,9 @@ class _LandingPageState extends State<LandingPage> {
     } catch (e) {
       debugPrint("❌ Facebook Sign-In error: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Facebook Sign-In error")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Facebook Sign-In error")));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -113,10 +114,7 @@ class _LandingPageState extends State<LandingPage> {
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/images/med_team.png',
-                      height: 250,
-                    ),
+                    Image.asset('assets/images/med_team.png', height: 250),
                     const SizedBox(height: 30),
                     const Text(
                       'Welcome to MediSafe',
@@ -141,7 +139,9 @@ class _LandingPageState extends State<LandingPage> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const LoginPage()),
+                            MaterialPageRoute(
+                              builder: (_) => const LoginPage(),
+                            ),
                           );
                         },
                         child: const Text(
@@ -233,7 +233,8 @@ class _LandingPageState extends State<LandingPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const CreateAccountPage()),
+                            builder: (_) => const CreateAccountPage(),
+                          ),
                         );
                       },
                       child: const Text(

@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: primaryColor, // Typing cursor color
           selectionColor: Color(0x3305318a), // Highlighted text background (semi-transparent)
-          selectionHandleColor: primaryColor, // Drag handle color (the "drop")
+          selectionHandleColor: primaryColor, // Drag handle color
         ),
         checkboxTheme: CheckboxThemeData(
           side: const BorderSide(color: primaryColor, width: 2),

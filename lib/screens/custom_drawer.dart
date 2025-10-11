@@ -2,33 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'landing_page.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
 
   Future<void> _logout(BuildContext context) async {
+    final supabase = Supabase.instance.client;
     try {
-      // ✅ Google Sign-Out
-      await GoogleSignIn().signOut();
+      // ✅ 1. Sign out from Supabase
+      await supabase.auth.signOut();
 
-      // ✅ Facebook Sign-Out
-      await FacebookAuth.instance.logOut();
+      // ✅ 2. Sign out from Google (if signed in)
+      final googleSignIn = GoogleSignIn();
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.disconnect();
+        await googleSignIn.signOut();
+        debugPrint("✅ Signed out from Google");
+      }
 
-      // ✅ Clear any stored login session
+      // ✅ 3. Sign out from Facebook (if signed in)
+      try {
+        final accessToken = await FacebookAuth.instance.accessToken;
+        if (accessToken != null) {
+          await FacebookAuth.instance.logOut();
+          debugPrint("✅ Signed out from Facebook");
+        }
+      } catch (e) {
+        debugPrint("⚠️ Facebook logout skipped: $e");
+      }
+
+      // ✅ 4. Clear local data
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
-    } catch (e) {
-      debugPrint("⚠️ Logout error: $e");
-    }
+      debugPrint("✅ Successfully logged out of all sessions");
 
-    if (context.mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LandingPage()),
-        (route) => false,
-      );
+      // ✅ 5. Redirect to Landing Page
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LandingPage()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Logout error: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Logout failed: $e")),
+        );
+      }
     }
   }
 
@@ -41,12 +66,17 @@ class CustomDrawer extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 80),
+
+          // Drawer Items
           _buildDrawerItem(context, Icons.person, 'Profile', '/profile', currentRoute),
           _buildDrawerItem(context, Icons.dashboard, 'Home', '/home', currentRoute),
           _buildDrawerItem(context, Icons.notifications_active, 'Custom alert', '/custom-alert', currentRoute),
           _buildDrawerItem(context, Icons.info_outline, 'About', '/about', currentRoute),
           _buildDrawerItem(context, Icons.menu_book, 'Guide', '/guide', currentRoute),
+
           const Spacer(),
+
+          // Logout button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: ElevatedButton.icon(
@@ -80,7 +110,7 @@ class CustomDrawer extends StatelessWidget {
 
     return Container(
       color: isSelected
-          ? const Color(0xFF05318a).withValues(alpha: 0.1)
+          ? const Color(0xFF05318a).withOpacity(0.1)
           : Colors.transparent,
       child: ListTile(
         leading: Icon(
