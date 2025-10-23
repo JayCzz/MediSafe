@@ -49,13 +49,13 @@ class MyApp extends StatelessWidget {
         ),
         checkboxTheme: CheckboxThemeData(
           side: const BorderSide(color: primaryColor, width: 2),
-          fillColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.selected)) {
+          fillColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
               return primaryColor;
             }
             return Colors.transparent;
           }),
-          checkColor: MaterialStateProperty.all(Colors.white),
+          checkColor: WidgetStateProperty.all(Colors.white),
         ),
         inputDecorationTheme: InputDecorationTheme(
           focusedBorder: OutlineInputBorder(

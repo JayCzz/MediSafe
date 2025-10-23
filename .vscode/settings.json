@@ -1,3 +1,36 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+  // ✅ Use Deno as default formatter for TypeScript
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+
+  // ✅ Enable Deno for your Supabase Edge Functions folder
+  "deno.enablePaths": [
+    "supabase/functions"
+  ],
+
+  // ✅ General Deno settings
+  "deno.enable": true,
+  "deno.lint": true,
+  "deno.importMap": "./import_map.json",
+
+  // ✅ Enable some Deno unstable features (these are fine to keep)
+  "deno.unstable": [
+    "bare-node-builtins",
+    "byonm",
+    "sloppy-imports",
+    "unsafe-proto",
+    "webgpu",
+    "broadcast-channel",
+    "worker-options",
+    "cron",
+    "kv",
+    "ffi",
+    "fs",
+    "http",
+    "net"
+  ],
+
+  // ✅ Java (safe to keep)
+  "java.configuration.updateBuildConfiguration": "interactive"
 }

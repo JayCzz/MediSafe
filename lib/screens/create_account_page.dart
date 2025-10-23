@@ -12,9 +12,11 @@ class CreateAccountPage extends StatefulWidget {
 
 class _CreateAccountPageState extends State<CreateAccountPage> {
   final _formKey = GlobalKey<FormState>();
-  final _userNameController = TextEditingController();
+  final _firstNameController = TextEditingController(); // ✅ Added
+  final _lastNameController = TextEditingController();  // ✅ Added
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _userNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -40,8 +42,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
       if (existingUser != null) {
         final provider = existingUser['auth_provider'] ?? 'manual';
-
         String message;
+
         if (provider == 'google') {
           message = 'This email is registered with Google. Please sign in with Google.';
         } else if (provider == 'facebook') {
@@ -66,11 +68,13 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
       // 3️⃣ Insert user into Supabase
       final response = await supabase.from('users').insert({
+        'first_name': _firstNameController.text.trim(), // ✅ Added
+        'last_name': _lastNameController.text.trim(),   // ✅ Added
         'username': _userNameController.text.trim(),
         'email': email,
         'phone_number': _phoneController.text.trim(),
         'password_hash': hashedPassword,
-        'auth_provider': 'manual', // ✅ Track provider type
+        'auth_provider': 'manual',
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       }).select();
@@ -117,6 +121,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   @override
   void dispose() {
+    _firstNameController.dispose(); // ✅ Added
+    _lastNameController.dispose();  // ✅ Added
     _userNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -148,18 +154,33 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 ),
                 const SizedBox(height: 40),
 
-                // Username
+                // ✅ First Name
                 TextFormField(
-                  controller: _userNameController,
+                  controller: _firstNameController,
                   decoration: InputDecoration(
-                    labelText: 'Username',
+                    labelText: 'First Name',
                     labelStyle: const TextStyle(color: Color(0xFF05318a)),
                     filled: true,
                     fillColor: Colors.grey.shade200,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   validator: (value) =>
-                      value == null || value.isEmpty ? 'Please enter your username' : null,
+                      value == null || value.isEmpty ? 'Please enter your first name' : null,
+                ),
+                const SizedBox(height: 20),
+
+                // ✅ Last Name
+                TextFormField(
+                  controller: _lastNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Last Name',
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
+                    filled: true,
+                    fillColor: Colors.grey.shade200,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Please enter your last name' : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -194,6 +215,21 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   ),
                   validator: (value) =>
                       value == null || value.length < 10 ? 'Enter a valid phone number' : null,
+                ),
+                const SizedBox(height: 20),
+
+                // Username
+                TextFormField(
+                  controller: _userNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    labelStyle: const TextStyle(color: Color(0xFF05318a)),
+                    filled: true,
+                    fillColor: Colors.grey.shade200,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Please enter your username' : null,
                 ),
                 const SizedBox(height: 20),
 

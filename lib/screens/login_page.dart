@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'home_page.dart';
+import 'forgot_password_page.dart'; // 👈 Integrated Forgot Password flow entry
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -48,7 +49,8 @@ class _LoginPageState extends State<LoginPage> {
       // Fetch user by username
       final response = await supabase
           .from('users')
-          .select('id, username, password_hash, email, phone_number, auth_provider')
+          .select(
+              'id, username, password_hash, email, phone_number, auth_provider')
           .eq('username', _usernameController.text.trim())
           .maybeSingle();
 
@@ -208,24 +210,49 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 10),
 
-                // Remember me
+                // ✅ Remember Me + Forgot Password
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Checkbox(
-                      value: _rememberMe,
-                      onChanged: (value) => setState(() => _rememberMe = value!),
-                      fillColor: MaterialStateProperty.resolveWith((states) {
-                        if (states.contains(MaterialState.selected)) {
-                          return primaryColor;
-                        }
-                        return Colors.transparent;
-                      }),
-                      side: BorderSide(color: primaryColor, width: 2),
-                      checkColor: Colors.white,
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (value) =>
+                              setState(() => _rememberMe = value!),
+                          fillColor: WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return primaryColor;
+                            }
+                            return Colors.transparent;
+                          }),
+                          side: BorderSide(color: primaryColor, width: 2),
+                          checkColor: Colors.white,
+                        ),
+                        Text('Remember Me', style: TextStyle(color: primaryColor)),
+                      ],
                     ),
-                    Text('Remember Me', style: TextStyle(color: primaryColor)),
+                    // 👇 Added Forgot Password navigation (OTP flow)
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordPage(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
 
                 // Login button
