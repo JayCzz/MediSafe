@@ -18,31 +18,56 @@ class _LandingPageState extends State<LandingPage> {
   final _supabase = Supabase.instance.client;
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkUserSession();
+  }
+
+  /// ✅ Skip landing page if already signed in
+  Future<void> _checkUserSession() async {
+    final session = _supabase.auth.currentSession;
+    if (session != null && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    }
+  }
+
   /// 🟢 Google Login with OTP verification
   Future<void> _googleLogin() async {
     setState(() => _isLoading = true);
-
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
       final account = await googleSignIn.signIn();
 
       if (account != null) {
         final googleEmail = account.email;
+        final googleName = account.displayName ?? 'Google User';
 
-        // ✅ Send numeric OTP to Google email
+        // ✅ Make sure user is saved in your custom table
+        await _supabase.from('users').upsert({
+          'username': googleName,
+          'email': googleEmail,
+          'auth_provider': 'google',
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'email');
+
+        // ✅ Trigger Supabase Auth email OTP
         await _supabase.auth.signInWithOtp(
           email: googleEmail,
           shouldCreateUser: true,
-          emailRedirectTo: null, // must disable magic link redirect
         );
 
         if (!mounted) return;
-
-        // Navigate to OTP verification page
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => OtpVerificationPage(email: googleEmail),
+            builder: (_) => OtpVerificationPage(
+              email: googleEmail,
+              isSupabaseAuth: true, // 👈 use built-in auth flow
+            ),
           ),
         );
       } else {
@@ -71,7 +96,6 @@ class _LandingPageState extends State<LandingPage> {
         final fbName = userData['name'] ?? 'fb_user';
         final fbEmail = userData['email'] ?? '${userData['id']}@facebook.com';
 
-        // Save to Supabase users table
         await _supabase.from('users').upsert({
           'username': fbName,
           'email': fbEmail,
@@ -81,7 +105,7 @@ class _LandingPageState extends State<LandingPage> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (_) => const HomePage()),
         );
       } else if (result.status == LoginStatus.cancelled) {
         debugPrint("⚠️ Facebook Sign-In canceled");

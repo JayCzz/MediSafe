@@ -12,8 +12,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
   final _supabase = Supabase.instance.client;
 
   @override
@@ -29,17 +29,27 @@ class _SplashScreenState extends State<SplashScreen>
       parent: _controller,
       curve: Curves.easeIn,
     );
-    _controller.forward();
 
-    // 🔹 Wait for splash animation before checking session
-    Future.delayed(const Duration(milliseconds: 3500), _checkSession);
+    // Start animation and run session check when animation finishes
+    _startAndCheckSession();
+  }
+
+  Future<void> _startAndCheckSession() async {
+    await _controller.forward();
+    // Small extra delay for smoother UX
+    await Future.delayed(const Duration(milliseconds: 300));
+    await _checkSession();
   }
 
   /// ✅ Check if user is already logged in
   Future<void> _checkSession() async {
     try {
-      // Refresh the session to ensure it's still valid
-      await _supabase.auth.refreshSession();
+      // Optional: try to refresh session if possible
+      try {
+        await _supabase.auth.refreshSession();
+      } catch (e) {
+        debugPrint('Info: refreshSession() threw: $e');
+      }
 
       final session = _supabase.auth.currentSession;
 
