@@ -1,7 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.medisafe">
+    package="com.medisafe.login">
 
-    <!-- ✅ Internet permission required for Google Sign-In and Supabase -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -13,48 +12,33 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- ✅ Keeps splash background visible while Flutter initializes -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
-            <!-- ✅ Launcher intent -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- ✅ Required intent filter for Supabase/Google OAuth redirect -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <!-- ⚠️ Update this scheme + host to match your Supabase redirect -->
-                <data
-                    android:scheme="io.supabase.medisafe"
-                    android:host="login-callback" />
-            </intent-filter>
         </activity>
 
-        <!-- ✅ Flutter engine registration -->
+        <!-- Google Native Sign-In Client ID -->
+        <meta-data
+            android:name="com.google.android.gms.client_id"
+            android:value="283853584357-nf9altetmptronvk1d3mk4thcg2smvhn.apps.googleusercontent.com" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- ✅ Optional: Needed for google_sign_in plugin -->
-        <meta-data
-            android:name="com.google.android.gms.client_id"
-            android:value="YOUR_WEB_CLIENT_ID.apps.googleusercontent.com" />
     </application>
 
-    <!-- ✅ Required by Flutter's text processing plugin -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />

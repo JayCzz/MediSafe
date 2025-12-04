@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:bcrypt/bcrypt.dart';
+
 import 'home_page.dart';
-import 'forgot_password_page.dart'; // 👈 Integrated Forgot Password flow entry
+import 'forgot_password_page.dart';
+import 'otp_verification_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,7 +15,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
@@ -27,100 +28,112 @@ class _LoginPageState extends State<LoginPage> {
     _loadSavedLogin();
   }
 
+  /// Load stored login credentials
   void _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+
     setState(() {
       _rememberMe = prefs.getBool('rememberMe') ?? false;
+
       if (_rememberMe) {
-        _usernameController.text = prefs.getString('username') ?? '';
+        _emailController.text = prefs.getString('email') ?? '';
         _passwordController.text = prefs.getString('password') ?? '';
       }
     });
   }
 
+  /// Show error snackbar
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  /// MAIN LOGIN FUNCTION
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+
+    final supabase = Supabase.instance.client;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
     try {
-      final supabase = Supabase.instance.client;
-
-      // Fetch user by username
-      final response = await supabase
-          .from('users')
-          .select(
-              'id, username, password_hash, email, phone_number, auth_provider')
-          .eq('username', _usernameController.text.trim())
-          .maybeSingle();
-
-      if (response == null) {
-        _showError('User not found');
-        return;
-      }
-
-      final provider = response['auth_provider'] ?? 'manual';
-
-      // 1️⃣ Block manual login for Google/Facebook accounts
-      if (provider == 'google') {
-        _showError('This account is linked to Google. Please sign in with Google.');
-        return;
-      } else if (provider == 'facebook') {
-        _showError('This account is linked to Facebook. Please sign in with Facebook.');
-        return;
-      }
-
-      // 2️⃣ Validate password for manual accounts
-      final storedHash = response['password_hash'] as String;
-      final isPasswordCorrect = BCrypt.checkpw(
-        _passwordController.text.trim(),
-        storedHash,
+      final res = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
       );
 
-      if (!isPasswordCorrect) {
-        _showError('Invalid username or password');
+      // If the user is not verified, user == null or AuthException
+      if (res.user == null) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationPage(email: email),
+          ),
+        );
         return;
       }
 
-      // 3️⃣ Save login info if "remember me" is checked
+      // Save Remember Me
       final prefs = await SharedPreferences.getInstance();
       if (_rememberMe) {
         await prefs.setBool('rememberMe', true);
-        await prefs.setString('username', _usernameController.text.trim());
-        await prefs.setString('password', _passwordController.text);
+        await prefs.setString('email', email);
+        await prefs.setString('password', password);
       } else {
-        await prefs.remove('rememberMe');
-        await prefs.remove('username');
-        await prefs.remove('password');
+        prefs.remove('rememberMe');
+        prefs.remove('email');
+        prefs.remove('password');
       }
 
-      // 4️⃣ Store logged-in user data for later use
-      await prefs.setString('user_id', response['id']);
-      await prefs.setString('email', response['email'] ?? '');
-      await prefs.setString('phone_number', response['phone_number'] ?? '');
+      // Fetch user profile row
+      final profile = await supabase
+          .from("users")
+          .select()
+          .eq("email", email)
+          .maybeSingle();
 
+      await prefs.setString("user_id", profile?["id"] ?? "");
+      await prefs.setString("phone_number", profile?["phone_number"] ?? "");
+
+      // NAVIGATE TO HOME
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const HomePage()),
       );
+    } on AuthException catch (e) {
+      // Email not verified → send to OTP page
+      if (e.message.toLowerCase().contains("confirm")) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationPage(email: email),
+          ),
+        );
+        return;
+      }
+
+      _showError(e.message);
     } catch (e) {
-      _showError('Unexpected error: $e');
+      _showError("Unexpected error: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -149,18 +162,23 @@ class _LoginPageState extends State<LoginPage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
+
                 const Text(
                   'Login',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 20),
 
-                // Username
+                // EMAIL FIELD
                 TextFormField(
-                  controller: _usernameController,
+                  controller: _emailController,
                   cursorColor: primaryColor,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Username',
+                    labelText: 'Email Address',
                     labelStyle: TextStyle(color: primaryColor),
                     filled: true,
                     fillColor: Colors.grey.shade200,
@@ -173,12 +191,20 @@ class _LoginPageState extends State<LoginPage> {
                       borderSide: BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Please enter your username' : null,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Enter your email";
+                    }
+                    if (!value.contains("@")) {
+                      return "Invalid email format";
+                    }
+                    return null;
+                  },
                 ),
+
                 const SizedBox(height: 20),
 
-                // Password
+                // PASSWORD FIELD
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -198,19 +224,32 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: primaryColor,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                     ),
                   ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Please enter your password' : null,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Enter your password";
+                    }
+                    if (value.length < 6) {
+                      return "Password must be at least 6 characters";
+                    }
+                    return null;
+                  },
                 ),
+
                 const SizedBox(height: 10),
 
-                // ✅ Remember Me + Forgot Password
+                // REMEMBER ME + FORGOT PASSWORD
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -229,16 +268,18 @@ class _LoginPageState extends State<LoginPage> {
                           side: BorderSide(color: primaryColor, width: 2),
                           checkColor: Colors.white,
                         ),
-                        Text('Remember Me', style: TextStyle(color: primaryColor)),
+                        Text(
+                          'Remember Me',
+                          style: TextStyle(color: primaryColor),
+                        ),
                       ],
                     ),
-                    // 👇 Added Forgot Password navigation (OTP flow)
                     TextButton(
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordPage(),
+                            builder: (_) => const ForgotPasswordPage(),
                           ),
                         );
                       },
@@ -255,7 +296,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 20),
 
-                // Login button
+                // LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   height: 45,

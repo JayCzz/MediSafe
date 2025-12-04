@@ -1,5 +1,6 @@
-package com.example.medisafe
+package com.medisafe.login
 
 import io.flutter.embedding.android.FlutterActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity: FlutterActivity() {
+}

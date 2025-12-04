@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'reset_password_page.dart';
 import 'home_page.dart';
 
 class OtpVerificationPage extends StatefulWidget {
-  final String? email;
-  final String? phoneNumber;
-  final bool isSupabaseAuth; // 👈 add flag to know which flow
+  final String email;
+  final bool isSupabaseAuth;
 
   const OtpVerificationPage({
     super.key,
-    this.email,
-    this.phoneNumber,
-    this.isSupabaseAuth = false,
+    required this.email,
+    this.isSupabaseAuth = true,
   });
 
   @override
@@ -21,147 +18,74 @@ class OtpVerificationPage extends StatefulWidget {
 
 class _OtpVerificationPageState extends State<OtpVerificationPage> {
   final _supabase = Supabase.instance.client;
-  final _otpController = TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
   bool _isVerifying = false;
   bool _isResending = false;
 
-  /// ✅ Verify the OTP
+  // ---------------------------------------------------
+  // 🔵 Verify OTP (Supabase Auth Email OTP)
+  // ---------------------------------------------------
   Future<void> _verifyOtp() async {
     final otp = _otpController.text.trim();
 
     if (otp.length != 6) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Enter a valid 6-digit OTP")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter a valid 6-digit OTP")),
+      );
       return;
     }
 
     setState(() => _isVerifying = true);
 
     try {
-      // 🟦 If using Supabase Auth (Google/email OTP)
-      if (widget.isSupabaseAuth && widget.email != null) {
-        final res = await _supabase.auth.verifyOTP(
-          email: widget.email!,
-          token: otp,
-          type: OtpType.email,
-        );
-
-        if (res.session != null) {
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const HomePage()),
-          );
-          return;
-        } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text("Invalid OTP")));
-          return;
-        }
-      }
-
-      // 🟨 Otherwise, use custom verification (for phone / manual email)
-      final isEmailFlow = widget.email != null && widget.email!.isNotEmpty;
-      final identifier = isEmailFlow ? 'email' : 'phone_number';
-      final value = isEmailFlow ? widget.email! : (widget.phoneNumber ?? '');
-
-      final response = await _supabase
-          .from('users')
-          .select('reset_otp, reset_otp_expiry')
-          .eq(identifier, value)
-          .maybeSingle();
-
-      if (response == null) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("User not found")));
-        return;
-      }
-
-      final storedOtp = response['reset_otp'] as String?;
-      final expiryRaw = response['reset_otp_expiry'];
-      final expiry = expiryRaw != null ? DateTime.tryParse(expiryRaw.toString()) : null;
-
-      if (storedOtp == null || expiry == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("OTP not found, request a new one")),
-        );
-        return;
-      }
-
-      if (DateTime.now().isAfter(expiry)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("OTP expired, request again")),
-        );
-        return;
-      }
-
-      if (storedOtp != otp) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Invalid OTP")));
-        return;
-      }
-
-      // ✅ Verified → go to reset password page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResetPasswordPage(
-            email: widget.email,
-            phoneNumber: widget.phoneNumber,
-          ),
-        ),
+      final res = await _supabase.auth.verifyOTP(
+        email: widget.email,
+        token: otp,
+        type: OtpType.email,
       );
+
+      if (res.session != null) {
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Invalid OTP")),
+        );
+      }
     } catch (e) {
-      debugPrint("❌ OTP verification error: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error verifying OTP: $e")));
+      debugPrint("OTP Verification Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error verifying OTP: $e")),
+      );
     } finally {
       setState(() => _isVerifying = false);
     }
   }
 
-  /// 🔁 Resend OTP (Edge Function or Supabase Auth)
+  // ---------------------------------------------------
+  // 🔁 Resend OTP
+  // ---------------------------------------------------
   Future<void> _resendOtp() async {
     setState(() => _isResending = true);
 
     try {
-      // For Supabase Auth email OTP (e.g. Google flow)
-      if (widget.isSupabaseAuth && widget.email != null) {
-        await _supabase.auth.signInWithOtp(
-          email: widget.email!,
-          shouldCreateUser: true,
-        );
+      await _supabase.auth.signInWithOtp(
+        email: widget.email,
+        shouldCreateUser: true,
+      );
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("OTP resent to your email")));
-        return;
-      }
-
-      // For custom SMS/email OTP
-      final isEmailFlow = widget.email != null && widget.email!.isNotEmpty;
-      final functionName = isEmailFlow ? 'send-otp' : 'send-sms-otp';
-      final body = isEmailFlow
-          ? {'email': widget.email}
-          : {'phone_number': widget.phoneNumber};
-
-      final res = await _supabase.functions.invoke(functionName, body: body);
-
-      if (res.status == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEmailFlow
-                ? "OTP resent to your email"
-                : "OTP resent to your phone"),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: ${res.data}")));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("OTP resent to your email")),
+      );
     } catch (e) {
-      debugPrint("❌ OTP resend error: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error resending OTP: $e")));
+      debugPrint("Resend OTP Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to resend OTP: $e")),
+      );
     } finally {
       setState(() => _isResending = false);
     }
@@ -169,39 +93,41 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color(0xFF05318a);
-    final contactInfo =
-        widget.email ?? widget.phoneNumber ?? 'your registered contact';
+    const primaryColor = Color(0xFF05318a);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Verify OTP"),
         backgroundColor: Colors.white,
         foregroundColor: primaryColor,
-        elevation: 0.5,
+        elevation: 1,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             Text(
-              "Enter the 6-digit OTP sent to $contactInfo",
+              "Enter the 6-digit code sent to:\n${widget.email}",
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
             ),
+
             const SizedBox(height: 30),
+
             TextField(
               controller: _otpController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: "OTP Code",
-                counterText: "",
-              ),
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
               maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: "OTP Code",
+                border: OutlineInputBorder(),
+                counterText: "",
+              ),
             ),
+
             const SizedBox(height: 30),
+
             _isVerifying
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
@@ -216,7 +142,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                     ),
                     child: const Text("Verify"),
                   ),
+
             const SizedBox(height: 20),
+
             _isResending
                 ? const CircularProgressIndicator()
                 : TextButton(
@@ -224,7 +152,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                     child: const Text(
                       "Resend OTP",
                       style: TextStyle(
-                        color: Color(0xFF05318a),
+                        color: primaryColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

@@ -1,15 +1,12 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.example.medisafe"
+    namespace = "com.medisafe.login"
     compileSdk = flutter.compileSdkVersion
-
-    // Force correct NDK version required by Firebase & plugins
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -22,16 +19,8 @@ android {
     }
 
     defaultConfig {
-        // ✅ FIXED: Kotlin DSL syntax
-        manifestPlaceholders["appAuthRedirectScheme"] =
-            "com.googleusercontent.apps.YOUR_WEB_CLIENT_ID"
-
-        // Use your unique application ID
-        applicationId = "com.example.medisafe"
-
-        // Firebase requires at least 23
+        applicationId = "com.medisafe.login"
         minSdk = 23
-
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -39,8 +28,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Using debug signing for now so flutter run --release works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

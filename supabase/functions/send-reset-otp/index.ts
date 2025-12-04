@@ -1,33 +1,32 @@
-// supabase/functions/send-otp/index.ts
+// supabase/functions/send-reset-otp/index.ts
 
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import "https://deno.land/std@0.192.0/dotenv/load.ts"; // ✅ Correct Deno-compatible import
+import "https://deno.land/std@0.192.0/dotenv/load.ts";
 
-// 🧩 Environment variables
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+// 🔐 Environment variables
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "no-reply@yourapp.com";
 
-// ✅ Initialize Supabase client
-const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+// 🧩 Initialize Supabase client (service role = full access)
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// ✅ Start the Edge Function server
+// 🚀 Start the Edge Function
 serve(async (req) => {
   try {
-    // Parse request body
     const { email } = await req.json();
 
     if (!email) {
       return new Response(JSON.stringify({ error: "Missing email" }), { status: 400 });
     }
 
-    // ✅ Check if user exists
+    // 🧩 Case-insensitive lookup
     const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("id")
-      .eq("email", email)
+      .select("id, email")
+      .ilike("email", email) // 👈 makes it case-insensitive
       .maybeSingle();
 
     if (fetchError) {
@@ -39,27 +38,27 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
     }
 
-    // ✅ Generate 6-digit OTP
+    // 🔢 Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // ✅ Set OTP expiry (10 minutes from now)
+    // ⏰ Expire in 10 minutes
     const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    // ✅ Save OTP and expiry in database
+    // 💾 Save OTP in DB
     const { error: updateError } = await supabase
       .from("users")
       .update({
         reset_otp: otp,
         reset_otp_expiry: expiry,
       })
-      .eq("email", email);
+      .eq("id", user.id);
 
     if (updateError) {
       console.error("Failed to save OTP:", updateError);
       return new Response(JSON.stringify({ error: "Failed to save OTP" }), { status: 500 });
     }
 
-    // ✅ Send OTP email using Resend API
+    // 📧 Send OTP email via Resend API
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -90,9 +89,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Email sending failed" }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return new Response(
+      JSON.stringify({ success: true, message: "OTP sent successfully" }),
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("Error in send-otp function:", error);
+    console.error("Error in send-reset-otp function:", error);
     return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
   }
 });
